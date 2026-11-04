@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import json
+from threading import Thread
+
+from agentshield.adapters.mock_mcp_server import create_mock_mcp_server
+from agentshield.cli import main
 from agentshield.config.models import MCPServerConfig, ScopeConfig
 from agentshield.discovery.mcp import discover_tools
 from agentshield.discovery.streamable_http import discover_remote_tools, invoke_remote_tool
@@ -85,3 +90,34 @@ def test_mcp_tool_result_injection_is_returned_as_untrusted_evidence(mock_mcp_en
     assert record["metadata_injection_suspected"] is True
     assert record["result_injection_suspected"] is True
     assert "Ignore previous instructions" in record["result"]["content"][0]["text"]
+
+
+def test_standalone_synthetic_mcp_server_cli_flow(tmp_path, capsys):
+    server = create_mock_mcp_server(port=0)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        url = f"http://127.0.0.1:{port}/mcp"
+        config_path = tmp_path / "mcp.yaml"
+        config_path.write_text(
+            f"""project:\n  name: mcp-cli-test\n  environment: isolated-test\n  data_classification: synthetic\ntarget:\n  adapter: mock_mcp\nscope:\n  allowed_hosts: [127.0.0.1]\n  allowed_mcp_servers: [{url}]\n  allowed_tools: [get_test_profile, search_test_documents]\nmcp:\n  server_url: {url}\n  timeout_seconds: 2\n  enable_tool_invocation: true\npolicy:\n  sensitive_tools: [simulate_sensitive_action]\n  require_approval: [simulate_sensitive_action]\n  default_tool_policy: deny\n""",
+            encoding="utf-8",
+        )
+        output_path = tmp_path / "audit.json"
+        assert main(["invoke-mcp-tool", "--config", str(config_path), "--tool", "get_test_profile",
+                     "--arguments-json", '{"profile_id":"synthetic-42"}', "--output", str(output_path)]) == 0
+        assert "MCP invocation allowed" in capsys.readouterr().out
+        record = json.loads(output_path.read_text(encoding="utf-8"))
+        assert record["result"]["content"][0]["text"] == "Synthetic profile: synthetic-42"
+        assert server.agentshield_state["calls"][0]["name"] == "get_test_profile"
+        assert main(["invoke-mcp-tool", "--config", str(config_path), "--tool", "simulate_sensitive_action",
+                     "--arguments-json", '{"action":"demo"}', "--output", str(output_path)]) == 1
+        denied = json.loads(output_path.read_text(encoding="utf-8"))
+        assert denied["decision"] == "denied"
+        assert len(server.agentshield_state["calls"]) == 1
+        assert server.agentshield_state["sensitive_attempts"] == []
+    finally:
+        server.shutdown()
+        thread.join(timeout=2)
+        server.server_close()

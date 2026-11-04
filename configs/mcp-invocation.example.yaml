@@ -1,0 +1,21 @@
+project:
+  name: agentshield-synthetic-mcp-invocation
+  environment: isolated-test
+  data_classification: synthetic
+target:
+  adapter: mock_mcp
+  fixture: bundled-loopback-mcp-server
+scope:
+  allowed_hosts: [127.0.0.1]
+  allowed_mcp_servers: [http://127.0.0.1:8765/mcp]
+  allowed_tools: [get_test_profile, search_test_documents]
+  allow_real_side_effects: false
+  use_mock_tools: true
+mcp:
+  server_url: http://127.0.0.1:8765/mcp
+  timeout_seconds: 5
+  enable_tool_invocation: true
+policy:
+  sensitive_tools: [simulate_sensitive_action, transfer_funds, delete_account]
+  require_approval: [simulate_sensitive_action, transfer_funds, delete_account]
+  default_tool_policy: deny

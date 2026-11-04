@@ -14,6 +14,7 @@ from agentshield import __version__
 from agentshield.adapters.http import HttpAgentAdapter
 from agentshield.adapters.mock import MockAgentAdapter
 from agentshield.adapters.fixtures import MCPConnectedMockAdapter, RAGMockAdapter
+from agentshield.adapters.mock_mcp_server import serve_mock_mcp
 from agentshield.config import load_config
 from agentshield.config.environment import load_local_environment
 from agentshield.discovery.mcp import ToolMetadata, discover_tools, metadata_changes
@@ -57,6 +58,8 @@ def _parser() -> argparse.ArgumentParser:
     invoke.add_argument("--tool", required=True)
     invoke.add_argument("--arguments-json", default="{}")
     invoke.add_argument("--output", default="reports/mcp-invocation.json")
+    mock_mcp = commands.add_parser("serve-mock-mcp", help="Run the harmless synthetic MCP server on 127.0.0.1")
+    mock_mcp.add_argument("--port", type=int, default=8765)
     run = commands.add_parser("run", help="Run the bounded baseline or dynamic suite")
     run.add_argument("--config", required=True)
     run.add_argument("--mode", choices=("baseline", "dynamic"), default="baseline")
@@ -83,6 +86,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "compare":
             print(json.dumps(compare_reports(args.before, args.after), indent=2))
+            return 0
+        if args.command == "serve-mock-mcp":
+            if not 1 <= args.port <= 65535:
+                raise AgentShieldError("--port must be in 1..65535.")
+            serve_mock_mcp(args.port)
             return 0
         config = load_config(args.config)
         if args.command == "run" and args.judge:

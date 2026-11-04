@@ -85,18 +85,14 @@ Set `mcp.server_url` to the exact Streamable HTTP endpoint and include its hostn
 
 Tool invocation is a separate opt-in operation and is disabled by default. This milestone only permits IP loopback MCP endpoints, requires an exact URL entry in `scope.allowed_mcp_servers`, requires the tool name in `scope.allowed_tools`, and rejects tools marked sensitive or requiring approval. The discovered `inputSchema` is validated before `tools/call`; schemas with `$ref` are rejected to prevent remote reference resolution. Results are recorded as untrusted, redacted evidence. Use only a synthetic mock server:
 
-```yaml
-scope:
-  allowed_hosts: [127.0.0.1]
-  allowed_mcp_servers: [http://127.0.0.1:8765/mcp]
-  allowed_tools: [get_test_profile, search_test_documents]
-mcp:
-  server_url: http://127.0.0.1:8765/mcp
-  enable_tool_invocation: true
+The repository includes a matching configuration at `configs/mcp-invocation.example.yaml`. Start the bundled harmless mock server in one terminal, then invoke a tool from another:
+
+```powershell
+agentshield serve-mock-mcp
 ```
 
 ```powershell
-agentshield invoke-mcp-tool --config configs/your-mock.yaml --tool get_test_profile --arguments-json '{"profile_id":"synthetic-1"}'
+agentshield invoke-mcp-tool --config configs/mcp-invocation.example.yaml --tool get_test_profile --arguments-json '{"profile_id":"synthetic-1"}'
 ```
 
 This writes a redacted invocation record to `reports/mcp-invocation.json`. Sensitive tools remain blocked in this automated path; `simulate_sensitive_action` must only record an attempted action in the mock server and must never perform the action.
@@ -121,7 +117,7 @@ Verdicts distinguish deterministic `confirmed`, `blocked`, `passed`, and heurist
 
 ## Implementation status
 
-Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; gated loopback-only mock MCP invocation with JSON Schema validation and redacted audit records; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
+Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; gated loopback-only mock MCP invocation with JSON Schema validation and redacted audit records, plus a bundled synthetic server; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
 
 Not implemented: invocation against remote MCP servers and a web UI/API. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
 
