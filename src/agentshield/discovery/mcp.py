@@ -21,7 +21,7 @@ class ToolMetadata:
     fingerprint: str
 
 
-_HIGH_IMPACT_TERMS = ("transfer", "payment", "delete", "email", "write", "admin", "account", "purchase")
+_HIGH_IMPACT_TERMS = ("transfer", "payment", "delete", "email", "write", "admin", "account", "purchase", "sensitive")
 
 
 def classify_impact(name: str, description: str) -> str:

@@ -17,7 +17,7 @@ from agentshield.adapters.fixtures import MCPConnectedMockAdapter, RAGMockAdapte
 from agentshield.config import load_config
 from agentshield.config.environment import load_local_environment
 from agentshield.discovery.mcp import ToolMetadata, discover_tools, metadata_changes
-from agentshield.discovery.streamable_http import discover_remote_tools
+from agentshield.discovery.streamable_http import discover_remote_tools, invoke_remote_tool
 from agentshield.errors import AgentShieldError
 from agentshield.execution.promptfoo import write_promptfoo_config
 from agentshield.execution.promptfoo_runner import run_promptfoo
@@ -52,6 +52,11 @@ def _parser() -> argparse.ArgumentParser:
     discover.add_argument("--output")
     discover.add_argument("--previous")
     discover.add_argument("--live", action="store_true", help="Read-only tools/list from mcp.server_url")
+    invoke = commands.add_parser("invoke-mcp-tool", help="Invoke one explicitly allowlisted tool on a loopback mock MCP server")
+    invoke.add_argument("--config", required=True)
+    invoke.add_argument("--tool", required=True)
+    invoke.add_argument("--arguments-json", default="{}")
+    invoke.add_argument("--output", default="reports/mcp-invocation.json")
     run = commands.add_parser("run", help="Run the bounded baseline or dynamic suite")
     run.add_argument("--config", required=True)
     run.add_argument("--mode", choices=("baseline", "dynamic"), default="baseline")
@@ -110,6 +115,17 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(rendered)
             return 0
+        if args.command == "invoke-mcp-tool":
+            try:
+                arguments = json.loads(args.arguments_json)
+            except json.JSONDecodeError as exc:
+                raise AgentShieldError("--arguments-json must contain valid JSON.") from exc
+            record = invoke_remote_tool(config, args.tool, arguments)
+            destination = Path(args.output)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(json.dumps(record, indent=2), encoding="utf-8")
+            print(f"MCP invocation {record['decision']}: {record['tool_name']}. Redacted audit record: {destination}")
+            return 1 if record["decision"] != "allowed" else 0
         if args.command == "promptfoo-config":
             path = write_promptfoo_config(load_baseline(config.testing.categories), args.output, config)
             print(f"Wrote Promptfoo configuration: {path}")

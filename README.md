@@ -79,9 +79,27 @@ agentshield run-promptfoo --config configs/your-isolated-target.yaml
 
 This requires the pinned Node runtime dependency (`npm ci`) and Promptfoo runs in no-write/no-cache mode. Raw provider output stays in a temporary directory and is removed after report generation.
 
-## MCP discovery
+## MCP discovery and optional mock invocation
 
-Set `mcp.server_url` to the exact Streamable HTTP endpoint and include its hostname in `scope.allowed_hosts`. For authenticated servers, set `mcp.auth_token_env` to the name of an environment variable containing a bearer token. Then run `agentshield discover --config configs/your-target.yaml --live`. This performs MCP initialization and bounded `tools/list` pagination, fingerprints metadata, and can compare it with a saved snapshot using `--previous`. It never invokes tools or grants authorization. MCP metadata and descriptions remain untrusted.
+Set `mcp.server_url` to the exact Streamable HTTP endpoint and include its hostname in `scope.allowed_hosts`. For authenticated servers, set `mcp.auth_token_env` to the name of an environment variable containing a bearer token. Then run `agentshield discover --config configs/your-target.yaml --live`. This performs MCP initialization and bounded `tools/list` pagination, fingerprints metadata, and can compare it with a saved snapshot using `--previous`. Discovery never grants authorization. MCP metadata and descriptions remain untrusted.
+
+Tool invocation is a separate opt-in operation and is disabled by default. This milestone only permits IP loopback MCP endpoints, requires an exact URL entry in `scope.allowed_mcp_servers`, requires the tool name in `scope.allowed_tools`, and rejects tools marked sensitive or requiring approval. The discovered `inputSchema` is validated before `tools/call`; schemas with `$ref` are rejected to prevent remote reference resolution. Results are recorded as untrusted, redacted evidence. Use only a synthetic mock server:
+
+```yaml
+scope:
+  allowed_hosts: [127.0.0.1]
+  allowed_mcp_servers: [http://127.0.0.1:8765/mcp]
+  allowed_tools: [get_test_profile, search_test_documents]
+mcp:
+  server_url: http://127.0.0.1:8765/mcp
+  enable_tool_invocation: true
+```
+
+```powershell
+agentshield invoke-mcp-tool --config configs/your-mock.yaml --tool get_test_profile --arguments-json '{"profile_id":"synthetic-1"}'
+```
+
+This writes a redacted invocation record to `reports/mcp-invocation.json`. Sensitive tools remain blocked in this automated path; `simulate_sensitive_action` must only record an attempted action in the mock server and must never perform the action.
 
 ## Dynamic generation
 
@@ -103,8 +121,8 @@ Verdicts distinguish deterministic `confirmed`, `blocked`, `passed`, and heurist
 
 ## Implementation status
 
-Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
+Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; gated loopback-only mock MCP invocation with JSON Schema validation and redacted audit records; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
 
-Not implemented: MCP tool invocation (discovery remains read-only) and a web UI/API. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
+Not implemented: invocation against remote MCP servers and a web UI/API. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
 
 See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) and [SECURITY.md](docs/SECURITY.md) for design and operational boundaries.

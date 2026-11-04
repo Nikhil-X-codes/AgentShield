@@ -41,6 +41,7 @@ class MCPServerConfig:
     server_url: str = ""
     timeout_seconds: float = 10.0
     auth_token_env: str = ""
+    enable_tool_invocation: bool = False
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,7 @@ class ScopeConfig:
     allowed_tools: tuple[str, ...] = ()
     allow_real_side_effects: bool = False
     use_mock_tools: bool = True
+    allowed_mcp_servers: tuple[str, ...] = ()
 
     def validate_target(self, target: TargetConfig) -> None:
         if target.adapter.startswith("mock"):
@@ -142,6 +144,19 @@ class ProjectConfig:
                 raise ConfigurationError("mcp.timeout_seconds must be in 0..120.")
             if self.mcp.auth_token_env and not self.mcp.auth_token_env.replace("_", "").isalnum():
                 raise ConfigurationError("mcp.auth_token_env must be an environment variable name.")
+        if self.mcp.enable_tool_invocation:
+            if not self.mcp.server_url or self.mcp.server_url not in self.scope.allowed_mcp_servers:
+                raise ScopeViolation("Tool invocation requires the exact mcp.server_url in scope.allowed_mcp_servers.")
+            if not self.scope.allowed_tools:
+                raise ScopeViolation("Tool invocation requires an explicit non-empty scope.allowed_tools list.")
+            host = urlparse(self.mcp.server_url).hostname or ""
+            try:
+                import ipaddress
+                is_loopback = ipaddress.ip_address(host).is_loopback
+            except ValueError:
+                is_loopback = False
+            if not is_loopback:
+                raise ScopeViolation("This milestone permits MCP tool invocation only against an IP loopback mock server.")
         limits = (self.testing.generated_variants_per_category, self.testing.adaptive_retries, self.testing.max_total_tests)
         if any(value < 0 for value in limits) or self.testing.max_total_tests < 1 or self.testing.max_total_tests > 500:
             raise ConfigurationError("Testing budgets are invalid; max_total_tests must be in 1..500.")
@@ -208,9 +223,9 @@ def load_config(path: str | Path) -> ProjectConfig:
     cfg = ProjectConfig(
         name=str(project.get("name", "")), environment=str(project.get("environment", "isolated-test")),
         target=TargetConfig(str(target.get("adapter", "mock")), str(target.get("base_url", "")), float(target.get("timeout_seconds", 10)), str(target.get("fixture", "mock")), str(target.get("profile", "agentshield")), str(target.get("model", "")), str(target.get("auth_token_env", ""))),
-        scope=ScopeConfig(_tuple(scope, "allowed_hosts"), _tuple(scope, "allowed_tools"), _bool(scope, "allow_real_side_effects", False), _bool(scope, "use_mock_tools", True)),
+        scope=ScopeConfig(_tuple(scope, "allowed_hosts"), _tuple(scope, "allowed_tools"), _bool(scope, "allow_real_side_effects", False), _bool(scope, "use_mock_tools", True), _tuple(scope, "allowed_mcp_servers")),
         data_classification=str(project.get("data_classification", "synthetic" if str(target.get("adapter", "mock")).startswith("mock") else "unknown")),
-        mcp=MCPServerConfig(str(mcp.get("server_url", "")), float(mcp.get("timeout_seconds", 10)), str(mcp.get("auth_token_env", ""))),
+        mcp=MCPServerConfig(str(mcp.get("server_url", "")), float(mcp.get("timeout_seconds", 10)), str(mcp.get("auth_token_env", "")), _bool(mcp, "enable_tool_invocation", False)),
         testing=TestingConfig(_tuple(testing, "categories") if "categories" in testing else DEFAULT_CATEGORIES, int(testing.get("generated_variants_per_category", 0)), int(testing.get("adaptive_retries", 0)), int(testing.get("max_total_tests", 40)), int(testing.get("max_requests_per_minute", 30)), int(testing.get("max_wall_clock_seconds", 300)), int(testing.get("max_total_tokens", 12000))),
         models=ModelConfig(str(models.get("provider", "none")), str(models.get("attack_model", "")), str(models.get("judge_model", "")), int(models.get("max_tokens", 1200)), float(models.get("timeout_seconds", 20))),
         policy=PolicyConfig(_tuple(policy, "sensitive_tools"), _tuple(policy, "require_approval"), str(policy.get("default_tool_policy", "deny"))),

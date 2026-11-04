@@ -9,12 +9,14 @@ target:
 scope:
   allowed_hosts: []
   allowed_tools: []
+  allowed_mcp_servers: []
   allow_real_side_effects: false
   use_mock_tools: true
 mcp:
   server_url: ""
   timeout_seconds: 10
   auth_token_env: ""
+  enable_tool_invocation: false
 testing:
   categories: [mcp_tool_injection, unauthorized_tool_execution, sensitive_action_without_approval]
   max_total_tests: 10
