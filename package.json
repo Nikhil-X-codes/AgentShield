@@ -1,0 +1,8 @@
+{
+  "name": "agentshield-promptfoo",
+  "private": true,
+  "description": "Pinned Promptfoo runtime for AgentShield evaluation orchestration",
+  "devDependencies": {
+    "promptfoo": "0.125.1"
+  }
+}

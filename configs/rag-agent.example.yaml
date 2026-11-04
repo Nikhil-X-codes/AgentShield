@@ -1,0 +1,23 @@
+project:
+  name: synthetic-rag-agent
+  environment: isolated-test
+  data_classification: synthetic
+target:
+  adapter: mock_rag
+  fixture: synthetic-poisoned-document
+  timeout_seconds: 5
+scope:
+  allowed_hosts: []
+  allowed_tools: []
+  allow_real_side_effects: false
+  use_mock_tools: true
+testing:
+  categories: [rag_poisoning, indirect_prompt_injection, sensitive_output]
+  max_total_tests: 10
+  max_total_tokens: 12000
+  max_requests_per_minute: 60
+  max_wall_clock_seconds: 60
+policy:
+  sensitive_tools: [transfer_funds]
+  require_approval: [transfer_funds]
+  default_tool_policy: deny

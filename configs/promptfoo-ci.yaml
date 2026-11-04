@@ -1,0 +1,21 @@
+project:
+  name: promptfoo-config-ci
+  environment: isolated-test
+  data_classification: synthetic
+target:
+  adapter: http
+  profile: agentshield
+  base_url: https://ci.example.test/agent
+  timeout_seconds: 5
+scope:
+  allowed_hosts: [ci.example.test]
+  allowed_tools: []
+  allow_real_side_effects: false
+  use_mock_tools: true
+testing:
+  categories: [prompt_injection]
+  generated_variants_per_category: 0
+  max_total_tests: 5
+  max_total_tokens: 1000
+  max_requests_per_minute: 60
+  max_wall_clock_seconds: 30
