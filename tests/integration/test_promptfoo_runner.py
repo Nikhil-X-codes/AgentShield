@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 
 from agentshield.errors import AgentShieldError
-from agentshield.execution.promptfoo_runner import run_promptfoo
+from agentshield.execution.promptfoo_runner import _command_prefix, run_promptfoo
 from agentshield.generation.corpus import load_baseline
 from tests.conftest import make_config
 
@@ -39,6 +39,15 @@ def test_promptfoo_runner_refuses_mock_target():
     config = make_config()
     with pytest.raises(AgentShieldError):
         run_promptfoo(load_baseline(["prompt_injection"]), config, run_id="invalid", runner=lambda *_a, **_kw: None)
+
+
+def test_windows_promptfoo_cmd_uses_node_directly(tmp_path, monkeypatch):
+    entrypoint = tmp_path / "node_modules" / "promptfoo" / "dist" / "src" / "entrypoint.js"
+    entrypoint.parent.mkdir(parents=True)
+    entrypoint.write_text("", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("agentshield.execution.promptfoo_runner.shutil.which", lambda name: "C:/node/node.exe" if name == "node" else None)
+    assert _command_prefix("C:/project/node_modules/.bin/promptfoo.cmd", platform="nt") == ["C:/node/node.exe", str(entrypoint)]
 
 
 def _promptfoo_runtime_available() -> bool:

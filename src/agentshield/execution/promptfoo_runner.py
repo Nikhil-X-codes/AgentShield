@@ -23,8 +23,10 @@ from agentshield.generation.corpus import AttackCase
 def _rows(payload: Any) -> list[dict[str, Any]]:
     if isinstance(payload, dict):
         results = payload.get("results", {})
-        if isinstance(results, dict) and isinstance(results.get("outputs"), list):
-            return results["outputs"]
+        if isinstance(results, dict):
+            for key in ("outputs", "results"):
+                if isinstance(results.get(key), list):
+                    return results[key]
         if isinstance(results, list):
             return results
     if isinstance(payload, list):
@@ -102,6 +104,20 @@ def normalize_promptfoo_export(payload: Any, cases: list[AttackCase], config: Pr
     return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, "execution_backend": "promptfoo", "case_count": len(traces), "total_case_count": len(traces), "elapsed_seconds": round(elapsed_seconds, 3)})
 
 
+def _command_prefix(resolved_executable: str, *, platform: str | None = None) -> list[str]:
+    """Return a native process prefix, bypassing Windows npm .cmd shims."""
+    platform = os.name if platform is None else platform
+    local_launcher = Path.cwd() / "node_modules" / ".bin" / "promptfoo"
+    is_local_launcher = Path(resolved_executable).resolve() == local_launcher.resolve()
+    if platform == "nt" and (Path(resolved_executable).suffix.lower() in {".cmd", ".bat"} or is_local_launcher):
+        node = shutil.which("node")
+        entrypoint = Path.cwd() / "node_modules" / "promptfoo" / "dist" / "src" / "entrypoint.js"
+        if not node or not entrypoint.is_file():
+            raise ProviderError("On Windows, install the pinned local Promptfoo package and Node.js before execution.")
+        return [node, str(entrypoint)]
+    return [resolved_executable]
+
+
 def run_promptfoo(cases: list[AttackCase], config: ProjectConfig, *, run_id: str, executable: str = "promptfoo", runner: Callable[..., Any] = subprocess.run) -> RunResult:
     """Invoke the user's Promptfoo CLI without a shell and keep raw outputs temporary."""
     if config.target.adapter != "http":
@@ -114,7 +130,7 @@ def run_promptfoo(cases: list[AttackCase], config: ProjectConfig, *, run_id: str
         resolved_executable = str(Path(executable).resolve())
     if not resolved_executable:
         local_bin = Path.cwd() / "node_modules" / ".bin"
-        candidates = (local_bin / "promptfoo", local_bin / "promptfoo.cmd")
+        candidates = (local_bin / "promptfoo.cmd", local_bin / "promptfoo") if os.name == "nt" else (local_bin / "promptfoo",)
         resolved_executable = next((str(path.resolve()) for path in candidates if path.is_file()), "")
     if not resolved_executable:
         raise ProviderError("Promptfoo CLI was not found. Install the pinned project dependency or pass its executable path.")
@@ -124,7 +140,7 @@ def run_promptfoo(cases: list[AttackCase], config: ProjectConfig, *, run_id: str
         workdir = Path(temp)
         config_path = write_promptfoo_config(safe_cases, workdir / "promptfooconfig.yaml", config)
         output_path = workdir / "promptfoo-results.json"
-        command = [resolved_executable, "eval", "-c", str(config_path), "--output", str(output_path), "--no-write", "--no-cache", "--no-progress-bar", "--no-table"]
+        command = [*_command_prefix(resolved_executable), "eval", "-c", str(config_path), "--output", str(output_path), "--no-write", "--no-cache", "--no-progress-bar", "--no-table"]
         environment = os.environ.copy()
         environment["PROMPTFOO_DISABLE_TELEMETRY"] = "1"
         environment["PROMPTFOO_CONFIG_DIR"] = str(workdir / "promptfoo-state")
