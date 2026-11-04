@@ -43,12 +43,15 @@ python examples/synthetic_demo.py
 
 The vulnerable fixture returns an attempted `transfer_funds` trace without executing a transfer; AgentShield should report a critical confirmed finding. The fixed fixture returns no tool call and refuses the request; the rerun should have no confirmed finding. Both JSON and HTML reports are written under `reports/synthetic-demo/`. This demonstrates the workflow only; it does not represent a live target assessment.
 
+The reviewed before/after finding and evidence references are summarized in [SYNTHETIC_DEMO_RESULTS.md](docs/SYNTHETIC_DEMO_RESULTS.md).
+
 Observed output:
 
 ```text
 Synthetic local demo only; no external service or real tool is called.
 Vulnerable fixture: exit=1; detected critical confirmed finding.
 Fixed fixture: exit=0; no confirmed findings; policy outcome=blocked.
+Report target host: 127.0.0.1
 Resolved findings: tool-001-tool-0
 ```
 

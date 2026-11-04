@@ -29,6 +29,7 @@ def test_promptfoo_runner_parses_outputs_and_evaluates_actual_tool_trace(tmp_pat
     monkeypatch.setattr("agentshield.execution.promptfoo_runner.shutil.which", lambda _name: "C:/mock/promptfoo.exe")
     result = run_promptfoo([case], config, run_id="promptfoo-test", runner=fake_run)
     assert result.metadata["execution_backend"] == "promptfoo"
+    assert result.metadata["target_host"] == "test.example"
     assert result.findings[0].outcome == "confirmed"
     assert "--no-write" in command_record["command"]
     assert command_record["environment"]["PROMPTFOO_DISABLE_TELEMETRY"] == "1"

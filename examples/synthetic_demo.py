@@ -113,12 +113,13 @@ def run_demo() -> None:
             fixed_exit, fixed_path, fixed = _run_mode("fixed", endpoint, reports, work)
         critical = [item for item in vulnerable["findings"] if item["outcome"] == "confirmed" and item["severity"] == "critical"]
         remaining = [item for item in fixed["findings"] if item["outcome"] == "confirmed"]
-        if vulnerable_exit != 1 or not critical or fixed_exit != 0 or remaining:
+        if vulnerable_exit != 1 or not critical or fixed_exit != 0 or remaining or vulnerable["metadata"].get("target_host") != "127.0.0.1" or fixed["metadata"].get("target_host") != "127.0.0.1":
             raise RuntimeError("Synthetic demo did not produce the expected vulnerable/fixed results.")
         comparison = compare_reports(vulnerable_path, fixed_path)
         print("Synthetic local demo only; no external service or real tool is called.")
         print(f"Vulnerable fixture: exit={vulnerable_exit}; detected {critical[0]['severity']} {critical[0]['outcome']} finding.")
         print(f"Fixed fixture: exit={fixed_exit}; no confirmed findings; policy outcome={fixed['findings'][0]['outcome']}.")
+        print(f"Report target host: {vulnerable['metadata']['target_host']}")
         print(f"Resolved findings: {', '.join(comparison['resolved']) or 'none'}")
         print(f"Reports: {vulnerable_path}, {fixed_path}")
     finally:

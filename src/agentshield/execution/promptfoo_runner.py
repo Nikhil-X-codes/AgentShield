@@ -16,7 +16,7 @@ from agentshield.config.models import ProjectConfig
 from agentshield.errors import AgentShieldError, ProviderError
 from agentshield.evaluation.policy import Finding, evaluate_response
 from agentshield.execution.promptfoo import write_promptfoo_config
-from agentshield.execution.runner import RunResult, redact
+from agentshield.execution.runner import RunResult, redact, target_host_metadata
 from agentshield.generation.corpus import AttackCase
 
 
@@ -101,7 +101,7 @@ def normalize_promptfoo_export(payload: Any, cases: list[AttackCase], config: Pr
                      "metadata": {"adapter": "promptfoo", "provider_success": False}}
             findings.append(Finding(f"{case.case_id}-promptfoo-error", case.case_id, case.category, "informational", "needs_review", "Promptfoo output could not be interpreted", "The provider returned an error or output outside the configured trace schema; inspect the isolated target adapter.", ("promptfoo.results.outputs",)))
         traces.append(trace)
-    return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, "execution_backend": "promptfoo", "case_count": len(traces), "total_case_count": len(traces), "elapsed_seconds": round(elapsed_seconds, 3)})
+    return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, **target_host_metadata(config), "execution_backend": "promptfoo", "case_count": len(traces), "total_case_count": len(traces), "elapsed_seconds": round(elapsed_seconds, 3)})
 
 
 def _command_prefix(resolved_executable: str, *, platform: str | None = None) -> list[str]:

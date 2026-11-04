@@ -6,6 +6,7 @@ import time
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
+from urllib.parse import urlsplit
 
 from agentshield.adapters.base import AgentAdapter
 from agentshield.config.models import ProjectConfig
@@ -25,6 +26,14 @@ def redact(value: Any) -> Any:
     if isinstance(value, str):
         return _SECRET_TEXT.sub(lambda match: (match.group(1) + "=[REDACTED]") if match.group(1) else "[REDACTED]", value[:8000])
     return value
+
+
+def target_host_metadata(config: ProjectConfig) -> dict[str, str]:
+    """Report only the validated hostname for an HTTP target, never credentials or URL paths."""
+    if config.target.adapter != "http":
+        return {}
+    host = urlsplit(config.target.base_url).hostname
+    return {"target_host": host} if host else {}
 
 
 @dataclass(frozen=True)
@@ -90,4 +99,4 @@ def run_cases(cases: list[AttackCase], adapter: AgentAdapter, config: ProjectCon
         findings.extend(case_findings)
         if any(finding.outcome == "confirmed" for finding in case_findings):
             break
-    return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, "case_count": len(traces), "total_case_count": budget.case_count, "request_count": budget.request_count, "tokens_reserved": budget.tokens_reserved, "elapsed_seconds": round(budget.elapsed(), 3)})
+    return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, **target_host_metadata(config), "case_count": len(traces), "total_case_count": budget.case_count, "request_count": budget.request_count, "tokens_reserved": budget.tokens_reserved, "elapsed_seconds": round(budget.elapsed(), 3)})

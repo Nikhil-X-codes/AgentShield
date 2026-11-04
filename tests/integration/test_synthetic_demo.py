@@ -18,3 +18,4 @@ def test_synthetic_demo_detects_and_resolves_mock_finding():
     assert result.returncode == 0, result.stderr
     assert "detected critical confirmed finding" in result.stdout
     assert "no confirmed findings" in result.stdout
+    assert "Report target host: 127.0.0.1" in result.stdout
