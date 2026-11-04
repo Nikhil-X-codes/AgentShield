@@ -17,15 +17,23 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            web-ui/package-lock.json
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - name: Install pinned Promptfoo runtime
         run: npm ci --no-audit --no-fund
-      - name: Install AgentShield and development dependencies
-        run: python -m pip install -e ".[dev]"
+      - name: Install pinned React UI dependencies
+        working-directory: web-ui
+        run: npm ci --no-audit --no-fund
+      - name: Build local web console
+        working-directory: web-ui
+        run: npm run build
+      - name: Install AgentShield, web API, and development dependencies
+        run: python -m pip install -e ".[dev,web]"
       - name: Validate isolated CI configuration
         run: agentshield validate-config configs/ci-agent.yaml
       - name: Generate and validate Promptfoo configuration

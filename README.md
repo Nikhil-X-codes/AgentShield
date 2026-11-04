@@ -115,10 +115,34 @@ agentshield compare reports/before.json reports/after.json
 
 Verdicts distinguish deterministic `confirmed`, `blocked`, `passed`, and heuristic `needs_review` results. Severity reflects demonstrated evidence. Report counts cover only cases actually run and do not establish overall agent security.
 
+## Optional local web console
+
+The optional Track 4 app lives in `src/agentshield/web/` (FastAPI API, schemas, worker, SQLite store) and `web-ui/` (React/Vite frontend). It is a local development console: the API binds to `127.0.0.1`, accepts loopback clients only, and exposes only the registered `finance-mock`, `rag-mock`, and `mcp-mock` profiles. Requests cannot supply target URLs, file paths, or shell commands. Runs execute AgentShield adapters directly in a bounded background worker; run metadata and redacted JSON reports are stored in SQLite under `reports/` by default.
+
+Install the optional backend dependencies from the repository root:
+
+```powershell
+python -m pip install -e ".[web,dev]"
+```
+
+Start the API and UI in separate terminals:
+
+```powershell
+python -m agentshield.web
+```
+
+```powershell
+cd web-ui
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. Set `AGENTSHIELD_WEB_DB` to choose a local SQLite file. Do not expose the unauthenticated development API beyond loopback.
+
 ## Implementation status
 
-Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; gated loopback-only mock MCP invocation with JSON Schema validation and redacted audit records, plus a bundled synthetic server; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
+Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; gated loopback-only mock MCP invocation with JSON Schema validation and redacted audit records, plus a bundled synthetic server; optional loopback-only FastAPI/React web console with registered profiles, bounded background worker, and SQLite run/report storage; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
 
-Not implemented: invocation against remote MCP servers and a web UI/API. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
+Not implemented: invocation against remote MCP servers. The optional web console is an MVP for local mock profiles, not a multi-user or internet-facing service. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
 
 See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) and [SECURITY.md](docs/SECURITY.md) for design and operational boundaries.

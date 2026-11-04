@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 import re
 from dataclasses import asdict, dataclass, field
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from agentshield.adapters.base import AgentAdapter
@@ -79,7 +79,7 @@ class RunBudget:
         self.tokens_reserved += token_reservation
 
 
-def run_cases(cases: list[AttackCase], adapter: AgentAdapter, config: ProjectConfig, *, run_id: str, budget: RunBudget | None = None) -> RunResult:
+def run_cases(cases: list[AttackCase], adapter: AgentAdapter, config: ProjectConfig, *, run_id: str, budget: RunBudget | None = None, progress_callback: Callable[[int, int], None] | None = None) -> RunResult:
     budget = budget or RunBudget(config)
     if budget.case_count + len(cases) > config.testing.max_total_tests:
         raise AgentShieldError("Selected test count exceeds testing.max_total_tests.")
@@ -97,6 +97,8 @@ def run_cases(cases: list[AttackCase], adapter: AgentAdapter, config: ProjectCon
         traces.append(trace)
         case_findings = evaluate_response(case, response, config)
         findings.extend(case_findings)
+        if progress_callback is not None:
+            progress_callback(len(traces), len(cases))
         if any(finding.outcome == "confirmed" for finding in case_findings):
             break
     return RunResult(run_id, tuple(traces), tuple(findings), {"project": config.name, "environment": config.environment, **target_host_metadata(config), "case_count": len(traces), "total_case_count": budget.case_count, "request_count": budget.request_count, "tokens_reserved": budget.tokens_reserved, "elapsed_seconds": round(budget.elapsed(), 3)})

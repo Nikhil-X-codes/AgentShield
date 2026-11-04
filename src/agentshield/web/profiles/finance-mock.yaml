@@ -1,0 +1,24 @@
+project:
+  name: finance-agent-web-mock
+  environment: isolated-test
+  data_classification: synthetic
+target:
+  adapter: mock
+  fixture: mock
+  profile: agentshield
+  timeout_seconds: 5
+scope:
+  allowed_hosts: []
+  allowed_tools: []
+  allow_real_side_effects: false
+  use_mock_tools: true
+testing:
+  categories: [prompt_injection, rag_poisoning, unauthorized_tool_execution, sensitive_output, mcp_tool_injection]
+  max_total_tests: 40
+  max_requests_per_minute: 60
+  max_wall_clock_seconds: 120
+  max_total_tokens: 12000
+policy:
+  sensitive_tools: [transfer_funds]
+  require_approval: [transfer_funds]
+  default_tool_policy: deny

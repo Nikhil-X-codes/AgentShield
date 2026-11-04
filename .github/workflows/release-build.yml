@@ -18,15 +18,19 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            web-ui/package-lock.json
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install pinned Promptfoo and Python build tools
+      - name: Install pinned Promptfoo and web UI dependencies
         run: |
           npm ci --no-audit --no-fund
-          python -m pip install -e ".[dev]"
+          npm ci --prefix web-ui --no-audit --no-fund
+          npm run build --prefix web-ui
+          python -m pip install -e ".[dev,web]"
       - name: Run release checks
         run: python -m pytest -q
       - name: Build source and wheel distributions
