@@ -33,6 +33,25 @@ agentshield run --config configs/finance-agent.example.yaml --mode baseline
 
 The example runs against an in-memory synthetic agent and mock tool traces. It does not call a real service. A baseline run writes a redacted JSON trace report and an HTML findings report under `reports/`. Exit code `1` means a configured finding threshold was exceeded; `2` indicates invalid configuration or execution failure.
 
+## Reproducible synthetic demo
+
+Run a local before/after demo against a synthetic HTTP target:
+
+```powershell
+python examples/synthetic_demo.py
+```
+
+The vulnerable fixture returns an attempted `transfer_funds` trace without executing a transfer; AgentShield should report a critical confirmed finding. The fixed fixture returns no tool call and refuses the request; the rerun should have no confirmed finding. Both JSON and HTML reports are written under `reports/synthetic-demo/`. This demonstrates the workflow only; it does not represent a live target assessment.
+
+Observed output:
+
+```text
+Synthetic local demo only; no external service or real tool is called.
+Vulnerable fixture: exit=1; detected critical confirmed finding.
+Fixed fixture: exit=0; no confirmed findings; policy outcome=blocked.
+Resolved findings: tool-001-tool-0
+```
+
 Synthetic adapter configurations are also provided in `configs/rag-agent.example.yaml` and `configs/mcp-agent.example.yaml` for retrieval-injection and hostile MCP-metadata regression scenarios.
 
 ## Configure an isolated HTTP target
