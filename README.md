@@ -83,6 +83,6 @@ Verdicts distinguish deterministic `confirmed`, `blocked`, `passed`, and heurist
 
 Implemented: configuration and scope validation; mock, synthetic RAG/MCP-connected, AgentShield HTTP, and OpenAI-compatible chat adapters; read-only Streamable HTTP MCP discovery with metadata fingerprints; versioned static corpus; bounded Groq generation, semantic judging, and adaptive retries; sequential runner with shared test/request/token/time budgets; trace redaction; deterministic tool authorization checks; Promptfoo execution and trace normalization; JSON/HTML reports, comparison, CLI, unit/integration tests, CI, and build-only release artifacts.
 
-Not implemented: MCP tool invocation (discovery is read-only), web UI/API, or direct merging of Promptfoo execution traces into AgentShield reports. Test suites use local synthetic targets and do not claim live provider coverage.
+Not implemented: MCP tool invocation (discovery remains read-only) and a web UI/API. Promptfoo execution is available through `run-promptfoo`; it normalizes its traces into AgentShield findings and reports. Tests use local synthetic targets and do not claim live provider coverage.
 
 See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) and [SECURITY.md](docs/SECURITY.md) for design and operational boundaries.
