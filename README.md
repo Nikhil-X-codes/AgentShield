@@ -21,7 +21,7 @@ python -m pip install -e .
 npm ci # installs the exact Promptfoo version from package-lock.json
 ```
 
-Copy `.env.example` to `.env` only for local use and set optional Groq variables in the process environment. Do not commit credentials.
+Copy `.env.example` to `.env` for local use. The CLI searches upward from the configuration file’s directory (or current directory for commands without a config) and loads the nearest `.env`; variables already set in the process environment take precedence. Groq uses `GROQ_API_KEY`, `GROQ_ATTACK_MODEL`, and `GROQ_JUDGE_MODEL` (the finance example references the latter two). Do not commit credentials.
 
 ## Quick start
 

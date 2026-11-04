@@ -15,6 +15,7 @@ from agentshield.adapters.http import HttpAgentAdapter
 from agentshield.adapters.mock import MockAgentAdapter
 from agentshield.adapters.fixtures import MCPConnectedMockAdapter, RAGMockAdapter
 from agentshield.config import load_config
+from agentshield.config.environment import load_local_environment
 from agentshield.discovery.mcp import ToolMetadata, discover_tools, metadata_changes
 from agentshield.discovery.streamable_http import discover_remote_tools
 from agentshield.errors import AgentShieldError
@@ -71,6 +72,9 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    config_path = getattr(args, "config", None)
+    env_search_directory = Path(config_path).expanduser().resolve().parent if config_path else None
+    load_local_environment(env_search_directory)
     try:
         if args.command == "compare":
             print(json.dumps(compare_reports(args.before, args.after), indent=2))

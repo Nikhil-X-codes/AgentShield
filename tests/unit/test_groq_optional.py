@@ -5,7 +5,11 @@ import os
 import pytest
 
 from agentshield.errors import ProviderError
+from agentshield.config.environment import load_local_environment
 from agentshield.generation.groq import generate_variants
+
+if os.environ.get("AGENTSHIELD_RUN_GROQ_TESTS") == "1":
+    load_local_environment()
 
 
 def test_dynamic_generation_requires_credentials_without_leaking_them(monkeypatch):
